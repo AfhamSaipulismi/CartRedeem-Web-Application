@@ -24,7 +24,9 @@ export const saveToken = (token) => {
 };
 
 export const login = async ({ identifier, password }) => {
-    const { data } = await axios.post(`${API}/auth/login`, { identifier, password });
+    // The backend authenticates by `email`; the form field is generic
+    // ("Email or Username"), so we send the typed value as `email`.
+    const { data } = await axios.post(`${API}/auth/login`, { email: identifier, password });
     saveSession(data);
     return data;
 };
