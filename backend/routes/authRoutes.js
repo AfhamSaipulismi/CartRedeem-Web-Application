@@ -14,6 +14,8 @@ router.post('/send-otp', authController.sendOTP);
 router.post('/verify-otp', authController.verifyOTP);
 router.post('/resend-otp', authController.resendOTP);
 router.post('/verify-google-otp', authController.verifyGoogleOTP);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 // Google OAuth routes
 router.get(

@@ -8,6 +8,7 @@ import TopNavBar         from './components/TopNavBar';
 import Footer            from './components/Footer';
 import LoginPage         from './pages/Login';
 import SignUpPage        from './pages/SignUp';
+import ForgotPasswordPage from './pages/ForgotPassword';
 import GoogleVerifyPage  from './pages/GoogleVerify';
 import HomePage          from './pages/Home';
 import ProductsPage      from './pages/Products';
@@ -140,6 +141,30 @@ const App = () => {
           onCreateAccount={() => {
             setLoginNotice('');
             setPage('signup');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onForgotPassword={() => {
+            setLoginNotice('');
+            setPage('forgot-password');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (page === 'forgot-password') {
+    return (
+      <div className="app-shell">
+        <ForgotPasswordPage
+          onSuccess={() => {
+            setLoginNotice('Password reset successfully. Please sign in.');
+            setPage('login');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onBackToLogin={() => {
+            setLoginNotice('');
+            setPage('login');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         />

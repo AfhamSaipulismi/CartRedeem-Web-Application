@@ -75,6 +75,20 @@ export const verifyGoogleOtp = async ({ email, otp }) => {
     return data;
 };
 
+// Step 1 of "forgot password": ask the backend to email a reset code. The code
+// is keyed by email; no password is supplied yet. Also reused as "resend".
+export const requestPasswordReset = async ({ email }) => {
+    const { data } = await axios.post(`${API}/auth/forgot-password`, { email });
+    return data;
+};
+
+// Step 2 of "forgot password": confirm the emailed code and set a new password.
+// We don't persist a session — the user is sent back to Login to sign in.
+export const resetPassword = async ({ email, otp, newPassword }) => {
+    const { data } = await axios.post(`${API}/auth/reset-password`, { email, otp, newPassword });
+    return data;
+};
+
 // Fetch the signed-in user's live profile (incl. the exact points balance)
 // straight from the database, and refresh the cached copy so the rest of the
 // UI stays in sync.
