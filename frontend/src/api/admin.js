@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Admin sessions are stored under their own keys so signing in to the admin
 // dashboard never collides with (or clobbers) a normal user session.

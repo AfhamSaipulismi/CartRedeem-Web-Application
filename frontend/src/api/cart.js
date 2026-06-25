@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from './auth';
 import { getCategories, normalizeVoucher } from './voucher';
 
-const API = 'http://localhost:5000/api';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Every cart endpoint is behind the `protect` middleware, so each request must
 // carry the signed-in user's bearer token.
