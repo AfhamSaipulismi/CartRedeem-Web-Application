@@ -263,22 +263,14 @@ exports.downloadOrderPDF = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Generate PDF
-    const filename = await generateOrderPDF(order, user);
+    // Generate PDF in memory and stream it back (no disk writes)
+    const pdfBuffer = await generateOrderPDF(order, user);
 
-    const filepath = path.join(__dirname, '../pdfs', filename);
-
-    // Send file
-    res.download(filepath, `Order-${orderId}.pdf`, (err) => {
-      if (err) {
-        console.error('Error downloading file:', err);
-      }
-
-      // Delete file after download
-      fs.unlink(filepath, (unlinkErr) => {
-        if (unlinkErr) console.error('Error deleting PDF:', unlinkErr);
-      });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Order-${orderId}.pdf"`,
     });
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('PDF download error:', error);
     res.status(500).json({ error: error.message });

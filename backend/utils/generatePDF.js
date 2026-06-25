@@ -1,6 +1,4 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 
 // Brand palette — mirrors the app's design tokens so the receipt feels on-brand.
 const COLOR = {
@@ -19,18 +17,17 @@ const COLOR = {
 const generateOrderPDF = (order, user) =>
   new Promise((resolve, reject) => {
     try {
-      // Create the PDFs directory if it doesn't exist yet.
-      const pdfDir = path.join(__dirname, '../pdfs');
-      if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
       // margin: 0 — we position everything by absolute coordinates for a precise,
       // invoice-style layout (coloured bands run edge to edge).
       const doc = new PDFDocument({ size: 'A4', margin: 0 });
 
-      const filename = `order-${order._id}-${Date.now()}.pdf`;
-      const filepath = path.join(pdfDir, filename);
-      const stream = fs.createWriteStream(filepath);
-      doc.pipe(stream);
+      // Collect the PDF in memory instead of writing to disk — serverless
+      // platforms (Vercel) have a read-only filesystem, so we resolve with a
+      // Buffer the caller can attach to an email or stream in a response.
+      const chunks = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
 
       const W = doc.page.width;   // 595.28
       const H = doc.page.height;  // 841.89
@@ -191,9 +188,6 @@ const generateOrderPDF = (order, user) =>
         .text(`Generated on ${new Date().toLocaleString()}  ·  CartRedeem System`, M, fy + 54, { width: INNER, align: 'center' });
 
       doc.end();
-
-      stream.on('finish', () => resolve(filename));
-      stream.on('error', reject);
     } catch (error) {
       reject(error);
     }

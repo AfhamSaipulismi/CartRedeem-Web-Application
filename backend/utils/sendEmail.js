@@ -1,17 +1,14 @@
 const transporter = require('../config/email');
 const { getCheckoutEmailTemplate } = require('./emailTemplates');
 const { generateOrderPDF } = require('./generatePDF');
-const fs = require('fs');
-const path = require('path');
 
 // @desc Send checkout confirmation email
 const sendCheckoutEmail = async (order, user) => {
   try {
     console.log(`📧 Sending checkout email to ${user.email}...`);
 
-    // Generate PDF
-    const pdfFilename = await generateOrderPDF(order, user);
-    const pdfPath = path.join(__dirname, '../pdfs', pdfFilename);
+    // Generate PDF in memory (no disk writes — serverless-friendly)
+    const pdfBuffer = await generateOrderPDF(order, user);
 
     // Get email template
     const htmlContent = getCheckoutEmailTemplate(order, user);
@@ -25,7 +22,7 @@ const sendCheckoutEmail = async (order, user) => {
       attachments: [
         {
           filename: `Order-${order._id}.pdf`,
-          path: pdfPath,
+          content: pdfBuffer,
         },
       ],
     };

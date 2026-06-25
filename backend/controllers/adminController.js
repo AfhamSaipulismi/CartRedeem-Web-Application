@@ -355,17 +355,13 @@ exports.downloadOrderPDF = async (req, res) => {
     // placeholder if the account was since deleted, so a missing user never 500s.
     const user = order.user_id || { username: 'Unknown user', email: '—' };
 
-    const filename = await generateOrderPDF(order, user);
-    const filepath = path.join(__dirname, '../pdfs', filename);
+    const pdfBuffer = await generateOrderPDF(order, user);
 
-    res.download(filepath, `Order-${orderId}.pdf`, (err) => {
-      if (err) console.error('Error sending admin PDF:', err);
-
-      // The file is temporary — remove it once it has been streamed.
-      fs.unlink(filepath, (unlinkErr) => {
-        if (unlinkErr) console.error('Error deleting PDF:', unlinkErr);
-      });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Order-${orderId}.pdf"`,
     });
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Admin PDF download error:', error);
     res.status(500).json({ error: error.message });
