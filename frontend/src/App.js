@@ -23,8 +23,12 @@ import EditProfilePage   from './pages/EditProfile';
 import AdminApp          from './pages/admin/AdminApp';
 
 // The admin dashboard lives behind the "#admin" URL hash (e.g.
-// http://localhost:3000/#admin)
-const isAdminRoute = () => window.location.hash.replace(/^#\/?/, '') === 'admin';
+// http://localhost:3000/#admin). Each sub-page adds a slug, e.g.
+// "#admin/vouchers" — so match the bare route and any "admin/…" slug.
+const isAdminRoute = () => {
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  return hash === 'admin' || hash.startsWith('admin/');
+};
 
 const consumeGoogleRedirect = () => {
   if (window.location.pathname !== '/auth/google/success') return null;

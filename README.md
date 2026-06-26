@@ -117,12 +117,15 @@ The database (`loyaltysystem`) uses **Mongoose** models in `backend/models/`.
 | Field | Type | Notes |
 |-------|------|-------|
 | `category_id` | ObjectId → Category | required (ref) |
-| `title` | String | required |
+| `title` | String | required, trimmed |
 | `description` | String | required |
 | `points` | Number | points required to redeem |
-| `image` | String | optional image URL |
+| `image` | String | optional, default `null` |
 | `quantity_available` | Number | default `100` |
+| `valid_until` | Date | optional expiry, default `null` (never expires when unset) |
+| `terms` | [String] | redemption terms; sensible defaults provided |
 | `is_active` | Boolean | default `true` |
+| `is_valid` | Virtual (Boolean) | computed on read — `true` while active **and** not past `valid_until`; included in JSON output |
 | `timestamps` | — | `createdAt`, `updatedAt` |
 
 ### CartItem — `models/CartItem.js`
@@ -159,6 +162,16 @@ Holds a pending signup until the emailed code is verified (auto‑expires after 
 | `googleId` | String | set for a first‑time Google sign‑in |
 | `expiresAt` | Date | TTL index — document auto‑deletes after expiry |
 
+### PasswordResetOTP — `models/PasswordResetOTP.js`
+One‑time code for the **forgot‑password** flow. Kept separate from the signup `OTP`
+model so the two flows never collide. The account already exists, so no
+username/password is stashed here — the user supplies the new password at verify time.
+| Field | Type | Notes |
+|-------|------|-------|
+| `email` | String | required, lowercase |
+| `otp` | String | the one‑time reset code |
+| `expiresAt` | Date | TTL index — auto‑deletes after 10 min |
+
 **Relationships:** `Voucher` belongs to a `Category`; `CartItem` and `CartItemHistory`
 each reference a `User` and a `Voucher`.
 
@@ -172,6 +185,7 @@ each reference a `User` and a `Voucher`.
 - **Login with Google (OAuth 2.0)**, including first‑time OTP verification for new Google accounts.
 - **Profile management** — view & edit username, email, phone, avatar, and password.
 - Passwords stored as **bcrypt** hashes; sessions kept via JWT in `localStorage`.
+- **Automatic sign‑out after 30 minutes of inactivity**, with a notice shown on the login screen.
 
 ### Points & vouchers (user)
 - Browse vouchers on the **Home** and **Products** pages, filtered by category.
@@ -182,6 +196,8 @@ each reference a `User` and a `Voucher`.
 - A **PDF receipt** is generated for each order and can be downloaded.
 - **Redemption history** of past orders.
 - **Dark / light mode** toggle (persisted, no flash on load).
+- **Skeleton loading placeholders** on the vouchers grid, home teaser, and cart — content fades in with no layout shift.
+- **Toast notifications** confirm actions (added to cart, removed, profile saved) and surface errors, with reduced‑motion support.
 
 ### Admin / Superadmin dashboard
 - Separate admin login at the **`#admin`** route.
@@ -254,10 +270,11 @@ CapstoneProjectMERN/
    │  ├─ hero-banner.png         # home hero images
    │  └─ hero-banner2.png
    ├─ src/
-   │  ├─ index.js                # React entry point
+   │  ├─ index.js                # React entry point (wraps App in ToastProvider)
    │  ├─ index.css               # global styles + theme variables
    │  ├─ App.js                  # navigation shell (state-based; #admin → AdminApp)
-   │  ├─ App.css                 # app-wide styles
+   │  ├─ App.css                 # app-wide styles + design tokens
+   │  ├─ enhancements.css        # animations, skeletons, toasts, reduced-motion
    │  ├─ logo.svg
    │  ├─ reportWebVitals.js
    │  ├─ api/                    # Axios wrappers around the backend REST API
@@ -267,11 +284,14 @@ CapstoneProjectMERN/
    │  │  └─ admin.js             #   admin login, stats, users, orders
    │  ├─ hooks/
    │  │  ├─ useDarkMode.js       # dark/light theme (persisted)
-   │  │  └─ useRedeem.js         # shared redeem logic
+   │  │  ├─ useRedeem.js         # shared redeem logic
+   │  │  └─ useIdleLogout.js     # auto sign-out after 30 min inactivity
    │  ├─ components/
    │  │  ├─ TopNavBar.jsx        # top navigation + cart badge + theme toggle
    │  │  ├─ Footer.jsx
    │  │  ├─ MainSection.jsx
+   │  │  ├─ Skeleton.jsx         # shimmer loading placeholders
+   │  │  ├─ ToastProvider.jsx    # toast/snackbar notification system + useToast hook
    │  │  ├─ VouchersSection.jsx  # grid of voucher cards
    │  │  ├─ VoucherCard.jsx      # single voucher card
    │  │  ├─ RedeemModal.jsx      # redeem confirmation dialog

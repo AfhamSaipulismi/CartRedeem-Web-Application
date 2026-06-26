@@ -60,6 +60,15 @@ const NAV_ITEMS = [
   { key: 'categories', label: 'Categories', icon: 'category' },
 ];
 
+// Admin sub-pages are deep-linkable via a slug on the hash, e.g.
+// "#admin/vouchers". A bare "#admin" (or an unknown slug) maps to the overview.
+const TAB_KEYS = NAV_ITEMS.map((item) => item.key);
+
+const tabFromHash = () => {
+  const slug = window.location.hash.replace(/^#\/?/, '').split('/')[1] || 'overview';
+  return TAB_KEYS.includes(slug) ? slug : 'overview';
+};
+
 // Title + subtitle shown in the page header for each view.
 const PAGE_META = {
   overview:   { title: 'Overview',   subtitle: 'Real-time performance metrics and system health.' },
@@ -108,7 +117,7 @@ const EmptyState = ({ icon, title, hint }) => (
 const AdminDashboard = ({ admin, onLogout }) => {
   const { isDark, toggle: toggleTheme } = useDarkMode();
 
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(tabFromHash);
   // Off-canvas sidebar visibility on narrow screens.
   const [navOpen, setNavOpen] = useState(false);
 
@@ -235,7 +244,23 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const goTo = (key) => {
     setTab(key);
     setNavOpen(false);
+    // Reflect the active sub-page in the URL so it's deep-linkable and the
+    // browser back/forward buttons move between admin tabs.
+    const target = `#admin/${key}`;
+    if (window.location.hash !== target) window.location.hash = target;
   };
+
+  // Keep the active tab in sync with the URL — handles deep links, manual hash
+  // edits and the browser back/forward buttons. Also canonicalises a bare
+  // "#admin" to "#admin/overview" (via replaceState, so no extra history entry).
+  useEffect(() => {
+    if (!window.location.hash.replace(/^#\/?/, '').includes('/')) {
+      window.history.replaceState(null, '', `#admin/${tabFromHash()}`);
+    }
+    const onHashChange = () => setTab(tabFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   // Quick-find across the already-loaded accounts and orders. Returns the two
   // groups separately so the dropdown can label them; each is capped to keep
