@@ -64,14 +64,29 @@ exports.getVouchersByCategory = async (req, res) => {
 // @access  Private/Admin
 exports.createVoucher = async (req, res) => {
   try {
-    const { category_id, points, title, description, quantity_available, image, is_active } =
-      req.body;
+    const {
+      category_id,
+      points,
+      title,
+      description,
+      quantity_available,
+      image,
+      is_active,
+      valid_until,
+      terms,
+    } = req.body;
 
     if (!category_id || !points || !title) {
       return res.status(400).json({
         error: 'Please provide category_id, points, and title',
       });
     }
+
+    // Only keep non-empty term lines; when none are provided let the schema
+    // default supply the standard set.
+    const cleanTerms = Array.isArray(terms)
+      ? terms.map((t) => String(t).trim()).filter(Boolean)
+      : undefined;
 
     const voucher = await Voucher.create({
       category_id,
@@ -81,6 +96,8 @@ exports.createVoucher = async (req, res) => {
       quantity_available: quantity_available || 100,
       image: image || null,
       is_active: is_active !== undefined ? is_active : true,
+      valid_until: valid_until || null,
+      ...(cleanTerms && cleanTerms.length > 0 ? { terms: cleanTerms } : {}),
     });
 
     console.log(`✅ Voucher created: ${voucher.title}`);
@@ -101,8 +118,21 @@ exports.createVoucher = async (req, res) => {
 // @access  Private/Admin
 exports.updateVoucher = async (req, res) => {
   try {
-    const { category_id, points, title, description, quantity_available, image, is_active } =
-      req.body;
+    const {
+      category_id,
+      points,
+      title,
+      description,
+      quantity_available,
+      image,
+      is_active,
+      valid_until,
+      terms,
+    } = req.body;
+
+    const cleanTerms = Array.isArray(terms)
+      ? terms.map((t) => String(t).trim()).filter(Boolean)
+      : undefined;
 
     const voucher = await Voucher.findByIdAndUpdate(
       req.params.id,
@@ -114,6 +144,8 @@ exports.updateVoucher = async (req, res) => {
         quantity_available,
         image,
         is_active,
+        valid_until: valid_until || null,
+        ...(cleanTerms ? { terms: cleanTerms } : {}),
       },
       { new: true, runValidators: true }
     );

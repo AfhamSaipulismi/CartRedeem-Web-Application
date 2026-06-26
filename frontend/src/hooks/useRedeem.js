@@ -14,6 +14,7 @@ export const useRedeem = ({ onSuccess } = {}) => {
   const [state, setState] = useState('idle');
   const [result, setResult] = useState(null); // orderDetails on success
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState(''); // machine code, e.g. VOUCHER_EXPIRED
   const [downloadingId, setDownloadingId] = useState(null); // receipt in flight
 
   /**
@@ -24,6 +25,7 @@ export const useRedeem = ({ onSuccess } = {}) => {
     if (state === 'loading') return;
     setState('loading');
     setError('');
+    setErrorCode('');
 
     redeemRequest()
       .then((data) => {
@@ -32,8 +34,20 @@ export const useRedeem = ({ onSuccess } = {}) => {
       })
       .catch((err) => {
         setError(getCartErrorMessage(err));
+        setErrorCode(err?.response?.data?.code || '');
         setState('error');
       });
+  };
+
+  /**
+   * Surface an error modal directly, without an API call — used when the client
+   * already knows the redemption can't proceed (e.g. an expired voucher).
+   */
+  const fail = (message, code = '') => {
+    if (state === 'loading') return;
+    setError(message);
+    setErrorCode(code);
+    setState('error');
   };
 
   // Save a single order's receipt PDF (generated on demand by the backend).
@@ -50,8 +64,9 @@ export const useRedeem = ({ onSuccess } = {}) => {
     setState('idle');
     setResult(null);
     setError('');
+    setErrorCode('');
     if (wasSuccess) onSuccess?.();
   };
 
-  return { state, result, error, downloadingId, run, downloadReceipt, close };
+  return { state, result, error, errorCode, downloadingId, run, fail, downloadReceipt, close };
 };

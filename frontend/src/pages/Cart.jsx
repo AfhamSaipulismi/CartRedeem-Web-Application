@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { getCart, removeFromCart, checkout } from '../api/cart';
 import { useRedeem } from '../hooks/useRedeem';
 import RedeemModal from '../components/RedeemModal';
+import { CartListSkeleton } from '../components/Skeleton';
+import { useToast } from '../components/ToastProvider';
 
 const formatPoints = (n) => `${Number(n || 0).toLocaleString()} pts`;
 
@@ -18,6 +20,7 @@ const Cart = ({ onContinueShopping, onCartChange }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState(null);
+  const toast = useToast();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -46,8 +49,14 @@ const Cart = ({ onContinueShopping, onCartChange }) => {
   const handleRemove = (cartItemId) => {
     setRemovingId(cartItemId);
     removeFromCart(cartItemId)
-      .then(load)
-      .catch(() => setError('Could not remove that item. Please try again.'))
+      .then(() => {
+        load();
+        toast.success('Removed from cart');
+      })
+      .catch(() => {
+        setError('Could not remove that item. Please try again.');
+        toast.error('Could not remove that item.');
+      })
       .finally(() => setRemovingId(null));
   };
 
@@ -59,7 +68,13 @@ const Cart = ({ onContinueShopping, onCartChange }) => {
   if (loading) {
     return (
       <main className="main-content container-max page-px">
-        <p className="vouchers-empty">Loading your cart...</p>
+        <div className="cart__heading">
+          <h1 className="text-headline-lg-mobile cart__title">My Selections</h1>
+          <p className="text-body-md cart__subtitle">
+            Review your selected vouchers before final redemption.
+          </p>
+        </div>
+        <CartListSkeleton count={3} />
       </main>
     );
   }
@@ -195,9 +210,14 @@ const Cart = ({ onContinueShopping, onCartChange }) => {
         state={redeem.state}
         result={redeem.result}
         error={redeem.error}
+        errorCode={redeem.errorCode}
         downloadingId={redeem.downloadingId}
         onDownloadReceipt={redeem.downloadReceipt}
         onClose={redeem.close}
+        onBrowseVouchers={() => {
+          redeem.close();
+          onContinueShopping?.();
+        }}
       />
     </main>
   );

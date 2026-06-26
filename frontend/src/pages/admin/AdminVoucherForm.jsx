@@ -6,8 +6,9 @@ import { useEffect, useState } from 'react';
  * Renders the "Add New Voucher" form from the mockup as a modal over the
  * voucher list. The fields map onto the actual Voucher schema
  * (title, category_id, points, quantity_available, image, description,
- * is_active) — the backend has no redemption-code or expiry-date column, so
- * those mockup fields are intentionally left out.
+ * valid_until, terms, is_active). "Valid Until" is an optional expiry date and
+ * "Terms & Conditions" is an editable list of lines shown on the voucher
+ * detail page.
  *
  * Purely controlled: the parent owns the API call (and the `saving` / `error`
  * state) and passes a normalised payload back through `onSubmit`.
@@ -29,6 +30,15 @@ const TIPS = [
   'A clear description and image build trust at checkout.',
 ];
 
+// Standard terms pre-filled for a new voucher (mirrors the backend schema
+// default + the voucher detail page fallback).
+const DEFAULT_TERMS = [
+  'Subject to voucher availability.',
+  'Not exchangeable for cash.',
+  'Cannot be combined with other promotions unless stated.',
+  'Final redemption terms are confirmed during checkout.',
+];
+
 const blankForm = {
   title: '',
   category_id: '',
@@ -36,7 +46,17 @@ const blankForm = {
   quantity_available: '100',
   image: '',
   description: '',
+  valid_until: '',
+  terms: [...DEFAULT_TERMS],
   is_active: true,
+};
+
+// A Date / ISO string from the API → the `YYYY-MM-DD` a <input type="date">
+// expects. Returns '' when there is no (valid) date.
+const toDateInput = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
 };
 
 const AdminVoucherForm = ({
@@ -63,6 +83,11 @@ const AdminVoucherForm = ({
           voucher.quantity_available != null ? String(voucher.quantity_available) : '100',
         image: voucher.image ?? '',
         description: voucher.description ?? '',
+        valid_until: toDateInput(voucher.valid_until),
+        terms:
+          Array.isArray(voucher.terms) && voucher.terms.length > 0
+            ? voucher.terms
+            : [...DEFAULT_TERMS],
         is_active: voucher.is_active ?? true,
       });
     } else {
@@ -85,6 +110,20 @@ const AdminVoucherForm = ({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  // ── Terms & Conditions list editing ──────────────────────────────────
+  const setTerm = (index) => (e) => {
+    const value = e.target.value;
+    setForm((prev) => {
+      const terms = [...prev.terms];
+      terms[index] = value;
+      return { ...prev, terms };
+    });
+  };
+  const addTerm = () =>
+    setForm((prev) => ({ ...prev, terms: [...prev.terms, ''] }));
+  const removeTerm = (index) =>
+    setForm((prev) => ({ ...prev, terms: prev.terms.filter((_, i) => i !== index) }));
+
   // Required-field check used to gate the submit button + inline hints.
   const missing = {
     title: !form.title.trim(),
@@ -106,6 +145,8 @@ const AdminVoucherForm = ({
       quantity_available: Number(form.quantity_available) || 0,
       image: form.image.trim() || null,
       description: form.description.trim(),
+      valid_until: form.valid_until || null,
+      terms: form.terms.map((t) => t.trim()).filter(Boolean),
       is_active: form.is_active,
     });
   };
@@ -229,6 +270,24 @@ const AdminVoucherForm = ({
               </div>
             </div>
 
+            {/* Valid until (expiry) */}
+            <div className="admin-field">
+              <label className="admin-field__label" htmlFor="vf-valid-until">
+                Valid Until <span className="admin-field__optional">(optional)</span>
+              </label>
+              <input
+                id="vf-valid-until"
+                type="date"
+                className="admin-input"
+                value={form.valid_until}
+                onChange={setField('valid_until')}
+                disabled={saving}
+              />
+              <span className="admin-field__hint">
+                Leave empty if the voucher has no expiry date.
+              </span>
+            </div>
+
             {/* Image URL + preview */}
             <div className="admin-field">
               <label className="admin-field__label" htmlFor="vf-image">Voucher Image URL</label>
@@ -267,6 +326,52 @@ const AdminVoucherForm = ({
               {touched && missing.description && (
                 <span className="admin-field__error">A description is required.</span>
               )}
+            </div>
+
+            {/* Terms & Conditions (editable list) */}
+            <div className="admin-field">
+              <label className="admin-field__label">Terms &amp; Conditions</label>
+              <span className="admin-field__hint">
+                These appear as a bulleted list on the voucher detail page. Add one
+                condition per line.
+              </span>
+              <div className="admin-terms">
+                {form.terms.map((term, i) => (
+                  <div className="admin-terms__row" key={i}>
+                    <span className="admin-terms__bullet" aria-hidden="true">
+                      {i + 1}.
+                    </span>
+                    <input
+                      type="text"
+                      className="admin-input"
+                      placeholder="e.g. Not exchangeable for cash."
+                      value={term}
+                      onChange={setTerm(i)}
+                      disabled={saving}
+                      aria-label={`Term ${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="admin-icon-action admin-icon-action--danger"
+                      onClick={() => removeTerm(i)}
+                      disabled={saving}
+                      title="Remove condition"
+                      aria-label={`Remove term ${i + 1}`}
+                    >
+                      <span className="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="admin-panel__link admin-terms__add"
+                onClick={addTerm}
+                disabled={saving}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">add</span>
+                Add condition
+              </button>
             </div>
 
             {error && (

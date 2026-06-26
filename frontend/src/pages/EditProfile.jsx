@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { updateMe, getAuthErrorMessage } from '../api/auth';
+import { useToast } from '../components/ToastProvider';
 
 // Capitalise the first letter so "afham" shows as "Afham".
 const toDisplayName = (name) =>
@@ -40,6 +41,7 @@ const readAndResizeImage = (file, maxDim = 320) =>
  */
 const EditProfile = ({ user, onSaved, onCancel }) => {
   const fileInputRef = useRef(null);
+  const toast = useToast();
 
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -128,6 +130,7 @@ const EditProfile = ({ user, onSaved, onCancel }) => {
     setSaving(true);
     try {
       const updated = await updateMe(changes);
+      toast.success('Profile updated');
       onSaved?.(updated);
     } catch (err) {
       setError(getAuthErrorMessage(err));

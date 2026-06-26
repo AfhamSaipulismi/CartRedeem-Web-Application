@@ -9,9 +9,12 @@ import { adminLogin, getAdminErrorMessage } from '../../api/admin';
  * Only accounts whose role is 'admin' can authenticate here — the backend rejects
  * normal users with a 403, which surfaces as an inline error.
  *
- * @param {{ onSuccess?: (session: { token: string, user: object }) => void }} props
+ * @param {{
+ *   notice?: string,                                  // info banner (e.g. after an idle logout)
+ *   onSuccess?: (session: { token: string, user: object }) => void,
+ * }} props
  */
-const AdminLogin = ({ onSuccess }) => {
+const AdminLogin = ({ notice, onSuccess }) => {
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +59,16 @@ const AdminLogin = ({ onSuccess }) => {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {/* Info notice (e.g. after an inactivity auto-logout) */}
+          {notice && (
+            <p className="text-label-sm auth-notice" role="status">
+              <span className="material-symbols-outlined auth-notice__icon" aria-hidden="true">
+                info
+              </span>
+              {notice}
+            </p>
+          )}
+
           {/* Email */}
           <div className="auth-field">
             <label className="text-label-sm auth-label" htmlFor="admin-email">

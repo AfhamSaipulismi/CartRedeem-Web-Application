@@ -24,6 +24,50 @@ const getCategoryName = (voucher, categoriesById = {}) => {
     return category?.name || categoriesById[String(category?._id || category?.id)] || 'Uncategorized';
 };
 
+// Turn a stored expiry date into a readable label. Accepts a Date/ISO string
+// (from the `valid_until` column) or an already-friendly string; falls back to
+// a neutral label when no expiry is set.
+const getValidUntil = (voucher) => {
+    const raw = voucher.validUntil || voucher.valid_until;
+    if (!raw) return 'No expiry listed';
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+
+    return date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Whether the voucher is currently valid. Prefer the backend's computed
+// `is_valid` virtual; fall back to deriving it locally from is_active +
+// valid_until so the UI still works without it.
+const getIsValid = (voucher) => {
+    if (typeof voucher.is_valid === 'boolean') return voucher.is_valid;
+    if (voucher.is_active === false) return false;
+
+    const raw = voucher.valid_until;
+    if (!raw) return true;
+
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? true : date.getTime() >= Date.now();
+};
+
+// Pick the card badge from the expiry date: EXPIRED once past, EXPIRING within
+// the final week, otherwise VALID. Vouchers with no expiry are always VALID.
+const getBadge = (voucher) => {
+    if (voucher.badge) return voucher.badge;
+
+    const raw = voucher.valid_until || voucher.validUntil;
+    if (!raw) return 'VALID';
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return 'VALID';
+
+    const daysLeft = (date.getTime() - Date.now()) / 86400000;
+    if (daysLeft < 0) return 'EXPIRED';
+    if (daysLeft <= 7) return 'EXPIRING';
+    return 'VALID';
+};
+
 const getOfferValue = (voucher) => {
     if (voucher.retailValue || voucher.retail_value) {
         return voucher.retailValue || voucher.retail_value;
@@ -40,10 +84,11 @@ export const normalizeVoucher = (voucher, categoriesById = {}) => {
         ...voucher,
         id: voucher._id || voucher.id,
         imageAlt: voucher.imageAlt || voucher.image_alt || voucher.title,
-        badge: voucher.badge || 'VALID',
+        badge: getBadge(voucher),
+        isValid: getIsValid(voucher),
         icon: voucher.icon || CATEGORY_ICONS[category] || 'confirmation_number',
         category,
-        validUntil: voucher.validUntil || voucher.valid_until || 'No expiry listed',
+        validUntil: getValidUntil(voucher),
         voucherType: voucher.voucherType || voucher.voucher_type || 'Digital voucher',
         retailValue: getOfferValue(voucher),
         yourCost:

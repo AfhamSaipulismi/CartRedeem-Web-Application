@@ -1,4 +1,5 @@
 import VoucherCard from './VoucherCard';
+import { VoucherCardSkeleton } from './Skeleton';
 import { getVouchers } from '../api/voucher';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -25,7 +26,10 @@ const VouchersSection = ({ onExplore, onViewAll }) => {
       })
       .catch(() => {
         if (isMounted) {
-          setError('Unable to load vouchers. Please make sure the backend is running.');
+          setError({
+            title: 'Server is currently unavailable.',
+            description: 'We will restore service as soon as possible. Please try again later.',
+          });
         }
       })
       .finally(() => {
@@ -59,9 +63,17 @@ const VouchersSection = ({ onExplore, onViewAll }) => {
       {/* Voucher Grid */}
       <div className="voucher-grid">
         {loading ? (
-          <p className="vouchers-empty">Loading vouchers...</p>
+          Array.from({ length: 3 }, (_, i) => <VoucherCardSkeleton key={i} />)
         ) : error ? (
-          <p className="vouchers-empty">{error}</p>
+          <div className="vouchers-empty-state">
+            <span className="material-symbols-outlined vouchers-empty-state__icon">
+              cloud_off
+            </span>
+            <p className="text-headline-md">{error.title}</p>
+            <p className="text-body-md vouchers-empty-state__hint">
+              {error.description}
+            </p>
+          </div>
         ) : newest.length > 0 ? (
           newest.map((v) => (
             <VoucherCard

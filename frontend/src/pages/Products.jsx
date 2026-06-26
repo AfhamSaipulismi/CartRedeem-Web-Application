@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import VoucherCard from '../components/VoucherCard';
+import { VoucherGridSkeleton } from '../components/Skeleton';
 import { getVoucherCategories, getVouchers } from '../api/voucher';
 
 /**
@@ -24,7 +25,10 @@ const Products = ({ onSelectProduct }) => {
       })
       .catch(() => {
         if (isMounted) {
-          setError('Unable to load vouchers. Please make sure the backend is running.');
+          setError({
+            title: 'Server is currently unavailable.',
+            description: 'We will restore service as soon as possible. Please try again later.',
+          });
         }
       })
       .finally(() => {
@@ -95,15 +99,25 @@ const Products = ({ onSelectProduct }) => {
       </div>
 
       {/* Results count */}
-      <p className="products-page__count text-label-sm">
-        {filtered.length} voucher{filtered.length !== 1 ? 's' : ''} found
-      </p>
+      {!loading && !error && (
+        <p className="products-page__count text-label-sm">
+          {filtered.length} voucher{filtered.length !== 1 ? 's' : ''} found
+        </p>
+      )}
 
       {/* Grid */}
       {loading ? (
-        <p className="vouchers-empty">Loading vouchers...</p>
+        <VoucherGridSkeleton count={6} />
       ) : error ? (
-        <p className="vouchers-empty">{error}</p>
+        <div className="vouchers-empty-state">
+          <span className="material-symbols-outlined vouchers-empty-state__icon">
+            cloud_off
+          </span>
+          <p className="text-headline-md">{error.title}</p>
+          <p className="text-body-md vouchers-empty-state__hint">
+            {error.description}
+          </p>
+        </div>
       ) : filtered.length > 0 ? (
         <div className="voucher-grid">
           {filtered.map((v) => (
@@ -133,11 +147,13 @@ const Products = ({ onSelectProduct }) => {
       )}
 
       {/* Page Footer */}
-      <div className="products-page__footer">
-        <p className="text-body-lg products-page__subtitle">
-          You've reached the end of the list.
-        </p>
-      </div>
+      {!loading && !error && filtered.length > 0 && (
+        <div className="products-page__footer">
+          <p className="text-body-lg products-page__subtitle">
+            You've reached the end of the list.
+          </p>
+        </div>
+      )}
 
     </main>
   );

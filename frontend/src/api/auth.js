@@ -5,6 +5,10 @@ const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const TOKEN_KEY = 'vp_token';
 const USER_KEY  = 'vp_user';
 
+// localStorage key for the inactivity auto-logout's last-activity timestamp.
+// Exported so the idle-logout hook and the logout below stay on the same key.
+export const ACTIVITY_KEY = 'vp_last_activity';
+
 // Persist the token + user returned by the backend so later requests can
 // authenticate and the UI can show who is logged in.
 const saveSession = ({ token, user }) => {
@@ -127,6 +131,9 @@ export const updateMe = async (changes) => {
 export const logout = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    // Clear the idle timestamp too, so the next sign-in starts with a fresh
+    // 30-minute window instead of inheriting a stale (possibly expired) one.
+    localStorage.removeItem(ACTIVITY_KEY);
 };
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);

@@ -7,6 +7,11 @@ const { sendCheckoutEmail } = require('../utils/sendEmail');
 const fs = require('fs');
 const path = require('path');
 
+// A voucher is expired once its (optional) valid_until date is in the past.
+// Vouchers with no valid_until never expire.
+const isVoucherExpired = (voucher) =>
+  Boolean(voucher?.valid_until) && new Date(voucher.valid_until).getTime() < Date.now();
+
 // @desc    Checkout - Redeem Vouchers
 // @route   POST /api/orders/checkout
 // @access  Private
@@ -25,6 +30,16 @@ exports.checkout = async (req, res) => {
 
     if (cartItems.length === 0) {
       return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    // Block checkout if any voucher in the cart has expired.
+    const expiredItems = cartItems.filter((item) => isVoucherExpired(item.voucher_id));
+    if (expiredItems.length > 0) {
+      const titles = expiredItems.map((item) => item.voucher_id.title).join(', ');
+      return res.status(400).json({
+        error: `These vouchers have already expired and can no longer be redeemed: ${titles}. Please remove them from your cart.`,
+        code: 'VOUCHER_EXPIRED',
+      });
     }
 
     // Calculate total points needed
@@ -122,6 +137,14 @@ exports.redeemNow = async (req, res) => {
     const voucher = await Voucher.findById(voucher_id);
     if (!voucher) {
       return res.status(404).json({ error: 'Voucher not found' });
+    }
+
+    // Reject redemption of an expired voucher.
+    if (isVoucherExpired(voucher)) {
+      return res.status(400).json({
+        error: 'This voucher has already expired and can no longer be redeemed.',
+        code: 'VOUCHER_EXPIRED',
+      });
     }
 
     const totalPoints = quantity * voucher.points;

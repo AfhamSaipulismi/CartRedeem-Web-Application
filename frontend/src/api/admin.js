@@ -2,10 +2,10 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-// Admin sessions are stored under their own keys so signing in to the admin
-// dashboard never collides with (or clobbers) a normal user session.
 const TOKEN_KEY = 'vp_admin_token';
 const USER_KEY  = 'vp_admin_user';
+
+export const ADMIN_ACTIVITY_KEY = 'vp_admin_last_activity';
 
 const saveSession = ({ token, user }) => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
@@ -27,10 +27,11 @@ export const isAdminAuthenticated = () => Boolean(getAdminToken());
 export const adminLogout = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    // Reset the idle timestamp so the next admin sign-in gets a fresh window.
+    localStorage.removeItem(ADMIN_ACTIVITY_KEY);
 };
 
-// Build the auth header for every protected admin call. Throws early if there
-// is no token so callers can surface "please sign in" instead of a 401.
+// Throws early if there is no token so callers can surface "please sign in" instead of a 401.
 const authConfig = () => {
     const token = getAdminToken();
     if (!token) throw new Error('Not authenticated');

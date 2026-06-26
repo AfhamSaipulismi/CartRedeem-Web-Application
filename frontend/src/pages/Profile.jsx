@@ -2,16 +2,7 @@ import { useEffect, useState } from 'react';
 import { getMe, getCurrentUser } from '../api/auth';
 import RedemptionHistory from '../components/RedemptionHistory';
 
-// 1 point = $0.01 redemption value (matches the Points page).
-const USD_PER_POINT = 0.01;
-
 const formatPoints = (n) => Number(n || 0).toLocaleString();
-
-const formatUsd = (pts) =>
-  (Number(pts || 0) * USD_PER_POINT).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'MYR',
-  });
 
 // "March 2022" — the month/year the account was created.
 const formatMemberSince = (iso) => {
@@ -104,7 +95,6 @@ const Profile = ({ user: initialUser, onNavigate }) => {
             <p className="profile-header__stat-value">
               {loading && !user ? '—' : formatPoints(points)}
             </p>
-            <p className="profile-header__stat-usd">≈ {formatUsd(points)} value</p>
           </div>
         </section>
 

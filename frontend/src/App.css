@@ -674,6 +674,11 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-gutter);
+  /* Fill the container rather than shrink-to-fit. The Products page nests this
+     in a centered flex column (.main-content align-items:center); without an
+     explicit width, an all-skeleton grid (empty cards have ~0 content width)
+     collapses and stacks vertically. */
+  width: 100%;
 }
 
 @media (min-width: 768px) {
@@ -746,6 +751,30 @@ body {
   color: var(--color-secondary);
   opacity: 0.7;
 }
+
+.voucher-card__badge--expired {
+  color: var(--color-error);
+}
+
+/* Dim a card whose voucher has expired */
+.voucher-card--expired .voucher-card__image {
+  filter: grayscale(0.55);
+  opacity: 0.75;
+}
+
+/* "Valid until" / "Expired on" line in the card body */
+.voucher-card__valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 12px;
+}
+.voucher-card__valid .material-symbols-outlined { font-size: 16px; }
+.voucher-card__valid--expired { color: var(--color-error); }
 
 /* Ticket notch effect */
 .voucher-card__body {
@@ -1437,6 +1466,41 @@ body {
 .detail__cta-hint {
   text-align: center;
   color: var(--color-secondary);
+}
+
+/* Inline "expired" notice shown in place of the Add to Cart / Redeem buttons */
+.detail__expired {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.detail__expired-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background-color: rgba(186, 26, 26, 0.08);
+  border: 1px solid rgba(186, 26, 26, 0.25);
+}
+.detail__expired-icon {
+  color: var(--color-error);
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.detail__expired-title {
+  margin: 0 0 2px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-error);
+}
+.detail__expired-text {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-on-surface-variant);
 }
 
 /*  Points Page  */
@@ -3326,6 +3390,16 @@ a.admin-support-item__value:hover { color: var(--color-primary); text-decoration
 .admin-status--active { color: var(--color-tertiary); }
 .admin-status--active::before { animation: admin-pulse 2s ease-in-out infinite; }
 .admin-status--inactive { color: var(--color-error); }
+.admin-status--valid { color: var(--color-tertiary); }
+.admin-status--expired { color: var(--color-error); }
+
+/* Valid Until column: expiry date stacked above a validity badge */
+.admin-validity-cell { display: flex; flex-direction: column; gap: 4px; }
+.admin-validity-cell__date {
+  font-size: 13px;
+  color: var(--color-on-surface);
+}
+.admin-validity-cell .admin-status { font-size: 12px; }
 @keyframes admin-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.45; transform: scale(0.8); }
@@ -4028,6 +4102,22 @@ a.admin-support-item__value:hover { color: var(--color-primary); text-decoration
   transition: background-color 0.2s;
 }
 .redeem-modal__done:hover { background: var(--color-primary); }
+.redeem-modal__done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.redeem-modal__done .material-symbols-outlined { font-size: 18px; }
+
+/* Expired-voucher error: Close + Browse Vouchers side by side */
+.redeem-modal__actions { display: flex; gap: 10px; }
+.redeem-modal__actions .redeem-modal__done { width: auto; flex: 1; }
+.redeem-modal__done--ghost {
+  background: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+}
+.redeem-modal__done--ghost:hover { background: var(--color-surface-container); }
 
 /* ─── Terms & Conditions modal (footer popup) ───────────────────────────── */
 .terms-modal {
@@ -4634,6 +4724,31 @@ a.contact-modal__value:hover {
   color: var(--color-on-surface);
 }
 .admin-field__error { font-size: 12px; color: var(--color-error); }
+.admin-field__hint { font-size: 12px; color: var(--color-on-surface-variant); }
+.admin-field__optional {
+  font-weight: 400;
+  color: var(--color-on-surface-variant);
+}
+
+/* Editable Terms & Conditions list (admin voucher form) */
+.admin-terms { display: flex; flex-direction: column; gap: 8px; }
+.admin-terms__row { display: flex; align-items: center; gap: 8px; }
+.admin-terms__row .admin-input { flex: 1; }
+.admin-terms__bullet {
+  flex-shrink: 0;
+  width: 22px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+}
+.admin-terms__add {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.admin-terms__add .material-symbols-outlined { font-size: 18px; }
 
 .admin-input {
   width: 100%;

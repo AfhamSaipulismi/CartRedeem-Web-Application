@@ -31,6 +31,17 @@ const formatDate = (value) => {
     : date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+// Whether a voucher is currently valid (active + not past its expiry date).
+// Uses the backend's computed `is_valid` virtual when present, otherwise
+// derives it locally so the column still works without it.
+const isVoucherValid = (v) => {
+  if (typeof v.is_valid === 'boolean') return v.is_valid;
+  if (v.is_active === false) return false;
+  if (!v.valid_until) return true;
+  const date = new Date(v.valid_until);
+  return Number.isNaN(date.getTime()) ? true : date.getTime() >= Date.now();
+};
+
 // Pick a representative icon from the voucher's category name (falls back to a
 // generic ticket). Keyword match keeps it working for new categories too.
 const ICON_BY_KEYWORD = [
@@ -234,7 +245,7 @@ const AdminVouchers = () => {
 
   // ── Export the filtered vouchers as CSV ─────────────────────────────
   const handleExportCSV = () => {
-    const header = ['Title', 'Category', 'Points', 'Quantity', 'Status', 'Created'];
+    const header = ['Title', 'Category', 'Points', 'Quantity', 'Status', 'Valid Until', 'Validity', 'Created'];
     const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
     const lines = filtered.map((v) =>
       [
@@ -243,6 +254,8 @@ const AdminVouchers = () => {
         v.points ?? 0,
         v.quantity_available ?? 0,
         v.is_active ? 'Active' : 'Inactive',
+        v.valid_until ? formatDate(v.valid_until) : 'No expiry',
+        isVoucherValid(v) ? 'Valid' : 'Expired',
         formatDate(v.createdAt),
       ]
         .map(escape)
@@ -422,6 +435,7 @@ const AdminVouchers = () => {
                     <th className="admin-table__num">Points</th>
                     <th className="admin-table__num">Quantity</th>
                     <th>Status</th>
+                    <th>Valid Until</th>
                     <th>Created</th>
                     <th className="admin-table__action">Actions</th>
                   </tr>
@@ -452,6 +466,20 @@ const AdminVouchers = () => {
                         <span className={`admin-status admin-status--${v.is_active ? 'active' : 'inactive'}`}>
                           {v.is_active ? 'Active' : 'Inactive'}
                         </span>
+                      </td>
+                      <td data-label="Valid Until">
+                        <div className="admin-validity-cell">
+                          <span className="admin-validity-cell__date">
+                            {v.valid_until ? formatDate(v.valid_until) : 'No expiry'}
+                          </span>
+                          <span
+                            className={`admin-status admin-status--${
+                              isVoucherValid(v) ? 'valid' : 'expired'
+                            }`}
+                          >
+                            {isVoucherValid(v) ? 'Valid' : 'Expired'}
+                          </span>
+                        </div>
                       </td>
                       <td data-label="Created">{formatDate(v.createdAt)}</td>
                       <td data-label="Actions" className="admin-table__action">

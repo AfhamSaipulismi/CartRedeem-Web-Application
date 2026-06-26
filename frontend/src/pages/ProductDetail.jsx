@@ -3,6 +3,7 @@ import { getVoucherById } from '../api/voucher';
 import { redeemVoucher } from '../api/cart';
 import { useRedeem } from '../hooks/useRedeem';
 import RedeemModal from '../components/RedeemModal';
+import { useToast } from '../components/ToastProvider';
 
 /**
  * @param {{
@@ -16,6 +17,7 @@ const ProductDetail = ({ voucherId, onBack, onAddToCart, onRedeemed }) => {
   const [voucher, setVoucher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const toast = useToast();
 
   // Transient "Added ✓" feedback for the Add to Cart button.
   const [adding, setAdding] = useState(false);
@@ -27,7 +29,10 @@ const ProductDetail = ({ voucherId, onBack, onAddToCart, onRedeemed }) => {
     try {
       await onAddToCart(voucher.id);
       setAdded(true);
+      toast.success(`${voucher.title} added to cart`);
       setTimeout(() => setAdded(false), 1800);
+    } catch {
+      toast.error('Could not add to cart. Please try again.');
     } finally {
       setAdding(false);
     }
@@ -39,6 +44,15 @@ const ProductDetail = ({ voucherId, onBack, onAddToCart, onRedeemed }) => {
 
   const handleRedeemNow = () => {
     if (!voucher) return;
+    // Expired vouchers can't be redeemed — show the expired popup straight away
+    // (the backend enforces this too, as a safety net).
+    if (voucher.badge === 'EXPIRED') {
+      redeem.fail(
+        'This voucher has already expired and can no longer be redeemed.',
+        'VOUCHER_EXPIRED'
+      );
+      return;
+    }
     redeem.run(() => redeemVoucher(voucher.id));
   };
 
@@ -206,33 +220,55 @@ const ProductDetail = ({ voucherId, onBack, onAddToCart, onRedeemed }) => {
                 </ul>
               </div>
 
-              {/* CTA */}
+              {/* CTA — expired vouchers show a notice instead of the buttons */}
               <div className="detail__cta-area">
-                {onAddToCart && (
-                  <button
-                    className={`detail__addcart-btn${added ? ' detail__addcart-btn--added' : ''}`}
-                    onClick={handleAddToCart}
-                    disabled={adding}
-                  >
-                    <span className="material-symbols-outlined">
-                      {added ? 'check_circle' : 'add_shopping_cart'}
-                    </span>
-                    {added ? 'Added to Cart' : adding ? 'Adding...' : 'Add to Cart'}
-                  </button>
+                {voucher.badge === 'EXPIRED' ? (
+                  <div className="detail__expired" role="alert">
+                    <div className="detail__expired-head">
+                      <span className="material-symbols-outlined detail__expired-icon" aria-hidden="true">
+                        event_busy
+                      </span>
+                      <div>
+                        <h3 className="detail__expired-title">Voucher already expired</h3>
+                        <p className="detail__expired-text">
+                          This voucher has already expired and can no longer be redeemed.
+                        </p>
+                      </div>
+                    </div>
+                    <button className="detail__redeem-btn" onClick={() => onBack?.()}>
+                      <span className="material-symbols-outlined">redeem</span>
+                      Browse Vouchers
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {onAddToCart && (
+                      <button
+                        className={`detail__addcart-btn${added ? ' detail__addcart-btn--added' : ''}`}
+                        onClick={handleAddToCart}
+                        disabled={adding}
+                      >
+                        <span className="material-symbols-outlined">
+                          {added ? 'check_circle' : 'add_shopping_cart'}
+                        </span>
+                        {added ? 'Added to Cart' : adding ? 'Adding...' : 'Add to Cart'}
+                      </button>
+                    )}
+                    <button
+                      className="detail__redeem-btn"
+                      onClick={handleRedeemNow}
+                      disabled={redeem.state === 'loading'}
+                    >
+                      <span className="material-symbols-outlined">
+                        {redeem.state === 'loading' ? 'progress_activity' : 'qr_code_scanner'}
+                      </span>
+                      {redeem.state === 'loading' ? 'Redeeming…' : 'Redeem Now'}
+                    </button>
+                    <p className="text-label-sm detail__cta-hint">
+                      Clicking 'Redeem Now' deducts the points and issues your receipt instantly.
+                    </p>
+                  </>
                 )}
-                <button
-                  className="detail__redeem-btn"
-                  onClick={handleRedeemNow}
-                  disabled={redeem.state === 'loading'}
-                >
-                  <span className="material-symbols-outlined">
-                    {redeem.state === 'loading' ? 'progress_activity' : 'qr_code_scanner'}
-                  </span>
-                  {redeem.state === 'loading' ? 'Redeeming…' : 'Redeem Now'}
-                </button>
-                <p className="text-label-sm detail__cta-hint">
-                  Clicking 'Redeem Now' deducts the points and issues your receipt instantly.
-                </p>
               </div>
 
             </div>
@@ -246,9 +282,14 @@ const ProductDetail = ({ voucherId, onBack, onAddToCart, onRedeemed }) => {
         state={redeem.state}
         result={redeem.result}
         error={redeem.error}
+        errorCode={redeem.errorCode}
         downloadingId={redeem.downloadingId}
         onDownloadReceipt={redeem.downloadReceipt}
         onClose={redeem.close}
+        onBrowseVouchers={() => {
+          redeem.close();
+          onBack?.();
+        }}
       />
     </main>
   );

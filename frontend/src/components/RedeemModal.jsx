@@ -8,15 +8,27 @@ const formatPoints = (n) => `${Number(n || 0).toLocaleString()} pts`;
  *   state: 'idle' | 'loading' | 'success' | 'error',
  *   result?: object,            // orderDetails on success
  *   error?: string,
+ *   errorCode?: string,         // machine code, e.g. 'VOUCHER_EXPIRED'
  *   downloadingId?: string,     // order whose receipt is downloading
  *   onDownloadReceipt: (orderId: string) => void,
  *   onClose: () => void,
+ *   onBrowseVouchers?: () => void, // shown on expired-voucher errors
  * }} props
  */
-const RedeemModal = ({ state, result, error, downloadingId, onDownloadReceipt, onClose }) => {
+const RedeemModal = ({
+  state,
+  result,
+  error,
+  errorCode,
+  downloadingId,
+  onDownloadReceipt,
+  onClose,
+  onBrowseVouchers,
+}) => {
   if (state === 'idle') return null;
 
   const orders = result?.orders || [];
+  const expired = errorCode === 'VOUCHER_EXPIRED';
 
   return (
     <div className="redeem-modal" role="dialog" aria-modal="true" aria-labelledby="redeem-modal-title">
@@ -102,19 +114,39 @@ const RedeemModal = ({ state, result, error, downloadingId, onDownloadReceipt, o
                 className="material-symbols-outlined redeem-modal__icon redeem-modal__icon--error"
                 aria-hidden="true"
               >
-                error
+                {expired ? 'event_busy' : 'error'}
               </span>
               <div>
                 <h2 id="redeem-modal-title" className="redeem-modal__title">
-                  Redemption failed
+                  {expired ? 'Voucher already expired' : 'Redemption failed'}
                 </h2>
                 <p className="redeem-modal__text">{error}</p>
               </div>
             </div>
 
-            <button type="button" className="redeem-modal__done" onClick={onClose}>
-              Close
-            </button>
+            {expired && onBrowseVouchers ? (
+              <div className="redeem-modal__actions">
+                <button
+                  type="button"
+                  className="redeem-modal__done redeem-modal__done--ghost"
+                  onClick={onClose}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="redeem-modal__done"
+                  onClick={onBrowseVouchers}
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">redeem</span>
+                  Browse Vouchers
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="redeem-modal__done" onClick={onClose}>
+                Close
+              </button>
+            )}
           </div>
         )}
       </div>

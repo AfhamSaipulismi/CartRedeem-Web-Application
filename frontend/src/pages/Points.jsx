@@ -2,16 +2,7 @@ import { useEffect, useState } from 'react';
 import { getMe, getCurrentUser } from '../api/auth';
 import RedemptionHistory from '../components/RedemptionHistory';
 
-// Redemption rate shown in the UI: 1 point = $0.01 (e.g. 2,500 pts ≈ $25.00).
-const USD_PER_POINT = 0.01;
-
 const formatPoints = (n) => Number(n || 0).toLocaleString();
-
-const formatUsd = (pts) =>
-  (Number(pts || 0) * USD_PER_POINT).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'MYR',
-  });
 
 // Static program info (no backing collection — these are the earning rules).
 const EARN_WAYS = [
@@ -19,11 +10,6 @@ const EARN_WAYS = [
     icon: 'group_add',
     title: 'Refer a Friend',
     desc: 'Get 500 points for every friend who signs up and redeems a voucher.',
-  },
-  {
-    icon: 'badge',
-    title: 'Complete Profile',
-    desc: 'Earn 200 points by filling out your demographic details.',
   },
   {
     icon: 'storefront',
@@ -84,9 +70,6 @@ const Points = ({ onRedeem }) => {
                 {loading && !user ? '—' : formatPoints(points)}
               </span>
               <span className="points-summary__unit">Points</span>
-            </p>
-            <p className="text-body-md points-summary__usd">
-              Equivalent to <strong>{formatUsd(points)}</strong> in redemption value.
             </p>
           </div>
 

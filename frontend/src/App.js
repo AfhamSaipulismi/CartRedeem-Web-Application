@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import './enhancements.css';
 
-import { isAuthenticated, logout, getCurrentUser, getMe, saveToken } from './api/auth';
+import { isAuthenticated, logout, getCurrentUser, getMe, saveToken, ACTIVITY_KEY } from './api/auth';
 import { addToCart, getCartCount }                        from './api/cart';
 import { useDarkMode }   from './hooks/useDarkMode';
+import { useIdleLogout } from './hooks/useIdleLogout';
 import TopNavBar         from './components/TopNavBar';
 import Footer            from './components/Footer';
 import LoginPage         from './pages/Login';
@@ -74,8 +75,6 @@ const pageToPath = (page, voucherId) =>
     ? `/products/${voucherId ?? ''}`
     : PAGE_TO_PATH[page] || '/';
 
-// Read the current URL back into a { page, voucherId } target, or null when
-// the path doesn't map to a known page (e.g. bare "/").
 const pathToState = () => {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const detail = path.match(/^\/products\/(.+)$/);
@@ -84,8 +83,6 @@ const pathToState = () => {
   return match ? { page: match[0], voucherId: null } : null;
 };
 
-// Guard a URL-derived target against the auth state: signed-out visitors can't
-// deep-link into protected pages, and signed-in users skip the auth screens.
 const resolveTarget = (target, authed) => {
   if (!target) return { page: authed ? 'home' : 'welcome', voucherId: null };
   if (authed && PUBLIC_PAGES.has(target.page)) return { page: 'home', voucherId: null };
@@ -187,6 +184,26 @@ const App = () => {
     setPage('login');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Same teardown as a manual logout, but tell the user why they're back at the
+  // sign-in screen. Triggered by the inactivity timer below.
+  const handleIdleLogout = () => {
+    logout();
+    setUser(null);
+    setSelectedVoucherId(null);
+    setCartCount(0);
+    setPage('login');
+    setLoginNotice('You were signed out due to 30 minutes of inactivity. Please sign in again.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Auto sign-out after 30 minutes with no activity. Only armed while a user is
+  // signed in; any mouse/keyboard/touch/scroll resets the window.
+  useIdleLogout({
+    enabled: Boolean(user),
+    onIdle: handleIdleLogout,
+    storageKey: ACTIVITY_KEY,
+  });
 
   // Back from detail → products list (or home if that's where they came from)
   const handleBack = () => {
